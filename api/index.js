@@ -2178,6 +2178,34 @@ export default async function handler(req, res) {
             });
         }
 
+        if (action === "logs-clear" && method === "DELETE") {
+            if (!requireUser(user, res)) {
+                return;
+            }
+
+            if (user.role !== "super_admin") {
+                return send(res, 403, {
+                    ok: false,
+                    error: "Bu işlem yalnızca Süper Yönetici tarafından yapılabilir."
+                });
+            }
+
+            const result = await sql`
+                WITH deleted AS (
+                    DELETE FROM audit_logs
+                    RETURNING 1
+                )
+                SELECT COUNT(*)::int AS deleted_count
+                FROM deleted
+            `;
+
+            return send(res, 200, {
+                ok: true,
+                deleted_count: result[0]?.deleted_count || 0,
+                message: "Tüm işlem kayıtları kalıcı olarak silindi."
+            });
+        }
+
         if (action === "logs" && method === "GET") {
             if (!requireUser(user, res, "audit.read")) {
                 return;
