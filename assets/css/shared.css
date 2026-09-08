@@ -1112,3 +1112,380 @@ tbody tr:hover td {
         width: 100%;
     }
 }
+
+
+/* =========================================================
+   EĞİTİM YÖNETİMİ — AKTİF / TAMAMLANAN EĞİTİMLER
+   ========================================================= */
+
+/* Eğitim durum rozeti */
+.egitim-durum {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    border: 1px solid var(--cizgi);
+}
+
+.egitim-durum.aktif {
+    color: var(--yesil);
+    background: rgba(56, 242, 160, 0.10);
+    border-color: rgba(56, 242, 160, 0.28);
+}
+
+.egitim-durum.aktif::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--yesil);
+    box-shadow: 0 0 12px rgba(56, 242, 160, 0.8);
+    animation: egitimNabiz 1.8s infinite;
+}
+
+.egitim-durum.tamamlandi {
+    color: var(--camgobegi);
+    background: rgba(34, 211, 238, 0.10);
+    border-color: rgba(34, 211, 238, 0.25);
+}
+
+.egitim-durum.tamamlandi::before {
+    content: "✓";
+    font-weight: 900;
+}
+
+@keyframes egitimNabiz {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.45;
+        transform: scale(0.75);
+    }
+}
+
+
+/* =========================================================
+   EĞİTİM LİSTESİ SEKME / FİLTRE
+   ========================================================= */
+
+.egitim-sekmeler {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+    padding: 7px;
+    border: 1px solid var(--cizgi);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.025);
+    width: fit-content;
+}
+
+.egitim-sekme {
+    appearance: none;
+    border: 0;
+    outline: none;
+    cursor: pointer;
+    padding: 10px 16px;
+    border-radius: 13px;
+    background: transparent;
+    color: var(--soluk);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    transition:
+        transform 0.2s ease,
+        background 0.2s ease,
+        color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.egitim-sekme:hover {
+    color: var(--metin);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.egitim-sekme.active {
+    color: #fff;
+    background: linear-gradient(
+        135deg,
+        var(--mor),
+        var(--pembe)
+    );
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.22);
+}
+
+.egitim-sekme:active {
+    transform: scale(0.97);
+}
+
+
+/* =========================================================
+   EĞİTİM DETAY ÜST KARTI
+   ========================================================= */
+
+.egitim-detay-ust {
+    position: relative;
+    overflow: hidden;
+}
+
+.egitim-detay-ust::after {
+    content: "";
+    position: absolute;
+    width: 230px;
+    height: 230px;
+    right: -100px;
+    top: -120px;
+    border-radius: 50%;
+    background: rgba(139, 92, 246, 0.16);
+    filter: blur(45px);
+    pointer-events: none;
+}
+
+.egitim-bilgi-satiri {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+
+.egitim-bilgi-parca {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 11px;
+    border-radius: 12px;
+    color: var(--soluk);
+    border: 1px solid var(--cizgi);
+    background: rgba(255, 255, 255, 0.025);
+    font-size: 13px;
+}
+
+.egitim-bilgi-parca b {
+    color: var(--metin);
+}
+
+
+/* =========================================================
+   EĞİTİM DÜZENLE / SONLANDIR BUTONLARI
+   ========================================================= */
+
+.buton-duzenle {
+    color: #fff;
+    border: 1px solid rgba(34, 211, 238, 0.30);
+    background: rgba(34, 211, 238, 0.10);
+}
+
+.buton-duzenle:hover {
+    background: rgba(34, 211, 238, 0.18);
+    border-color: rgba(34, 211, 238, 0.50);
+    transform: translateY(-2px);
+}
+
+.buton-sonlandir {
+    color: #fff;
+    border: 1px solid rgba(255, 138, 52, 0.35);
+    background: linear-gradient(
+        135deg,
+        rgba(255, 138, 52, 0.18),
+        rgba(255, 79, 216, 0.10)
+    );
+}
+
+.buton-sonlandir:hover {
+    border-color: rgba(255, 138, 52, 0.65);
+    box-shadow: 0 10px 30px rgba(255, 138, 52, 0.14);
+    transform: translateY(-2px);
+}
+
+.buton-aktif-et {
+    color: #fff;
+    border: 1px solid rgba(56, 242, 160, 0.32);
+    background: rgba(56, 242, 160, 0.10);
+}
+
+.buton-aktif-et:hover {
+    background: rgba(56, 242, 160, 0.17);
+    border-color: rgba(56, 242, 160, 0.55);
+    box-shadow: 0 10px 30px rgba(56, 242, 160, 0.10);
+    transform: translateY(-2px);
+}
+
+
+/* =========================================================
+   TAMAMLANAN EĞİTİM KARTI
+   ========================================================= */
+
+.egitim-tamamlandi-kart {
+    position: relative;
+    opacity: 0.92;
+}
+
+.egitim-tamamlandi-kart::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 18px;
+    bottom: 18px;
+    width: 3px;
+    border-radius: 10px;
+    background: linear-gradient(
+        180deg,
+        var(--camgobegi),
+        var(--mor)
+    );
+}
+
+.egitim-tamamlandi-kart:hover {
+    opacity: 1;
+}
+
+
+/* =========================================================
+   TAMAMLANAN EĞİTİM UYARISI
+   ========================================================= */
+
+.egitim-kilit-uyari {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 18px 0;
+    padding: 15px 17px;
+    border-radius: 16px;
+    border: 1px solid rgba(34, 211, 238, 0.22);
+    background: rgba(34, 211, 238, 0.07);
+}
+
+.egitim-kilit-uyari .ikon {
+    display: grid;
+    place-items: center;
+    min-width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    background: rgba(34, 211, 238, 0.12);
+    font-size: 17px;
+}
+
+.egitim-kilit-uyari b {
+    display: block;
+    color: var(--metin);
+    margin-bottom: 3px;
+}
+
+.egitim-kilit-uyari span {
+    color: var(--soluk);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   KİLİTLİ KATILIMCI ALANLARI
+   ========================================================= */
+
+.egitim-kilitli select:disabled,
+.egitim-kilitli input:disabled,
+.egitim-kilitli textarea:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+}
+
+.egitim-kilitli .kisi-karti {
+    position: relative;
+}
+
+.egitim-kilitli .kisi-karti::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    border: 1px solid rgba(34, 211, 238, 0.05);
+}
+
+
+/* =========================================================
+   EĞİTİM DÜZENLE MODALI
+   ========================================================= */
+
+.egitim-duzenle-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 15px;
+}
+
+.egitim-duzenle-form .tam-satir {
+    grid-column: 1 / -1;
+}
+
+.egitim-duzenle-baslik {
+    margin-bottom: 18px;
+}
+
+.egitim-duzenle-baslik h2 {
+    margin-bottom: 5px;
+}
+
+.egitim-duzenle-baslik p {
+    margin: 0;
+    color: var(--soluk);
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   SONLANDIRMA BİLGİSİ
+   ========================================================= */
+
+.sonlandirma-bilgisi {
+    margin-top: 13px;
+    padding-top: 13px;
+    border-top: 1px solid var(--cizgi);
+    color: var(--soluk);
+    font-size: 12px;
+}
+
+.sonlandirma-bilgisi b {
+    color: var(--camgobegi);
+}
+
+
+/* =========================================================
+   MOBİL
+   ========================================================= */
+
+@media (max-width: 700px) {
+    .egitim-sekmeler {
+        width: 100%;
+    }
+
+    .egitim-sekme {
+        flex: 1;
+        text-align: center;
+    }
+
+    .egitim-duzenle-form {
+        grid-template-columns: 1fr;
+    }
+
+    .egitim-duzenle-form .tam-satir {
+        grid-column: auto;
+    }
+
+    .egitim-bilgi-satiri {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .egitim-bilgi-parca {
+        width: 100%;
+    }
+}
