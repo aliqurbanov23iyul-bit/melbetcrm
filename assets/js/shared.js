@@ -206,7 +206,102 @@ const CRM = {
         }
     },
 
+    initMotion() {
+        if (document.documentElement.dataset.motionReady === "1") {
+            return;
+        }
+
+        document.documentElement.dataset.motionReady = "1";
+
+        const canHover = window.matchMedia(
+            "(hover: hover) and (pointer: fine)"
+        ).matches;
+
+        const reducedMotion = window.matchMedia(
+            "(prefers-reduced-motion: reduce)"
+        ).matches;
+
+        if (!canHover || reducedMotion) {
+            return;
+        }
+
+        const root = document.documentElement;
+
+        window.addEventListener("pointermove", (event) => {
+            root.style.setProperty("--mouse-x", `${event.clientX}px`);
+            root.style.setProperty("--mouse-y", `${event.clientY}px`);
+
+            const button = event.target.closest(
+                ".buton, .mini-buton, .nav-link, .filtre-sekme, .egitim-sekme"
+            );
+
+            if (button) {
+                const rect = button.getBoundingClientRect();
+                const localX = event.clientX - rect.left;
+                const localY = event.clientY - rect.top;
+                const normalizedX = (localX / rect.width) - 0.5;
+                const normalizedY = (localY / rect.height) - 0.5;
+
+                button.style.setProperty(
+                    "--mag-x",
+                    `${normalizedX * 4}px`
+                );
+                button.style.setProperty(
+                    "--mag-y",
+                    `${normalizedY * 3}px`
+                );
+                button.style.setProperty(
+                    "--local-x",
+                    `${localX}px`
+                );
+                button.style.setProperty(
+                    "--local-y",
+                    `${localY}px`
+                );
+            }
+
+            const card = event.target.closest(
+                ".kart, .kisi-karti, .hizli-kart, .menejer-secim-karti, .izin-karti, .rol-karti"
+            );
+
+            if (card) {
+                const rect = card.getBoundingClientRect();
+                const localX = event.clientX - rect.left;
+                const localY = event.clientY - rect.top;
+                const x = (localX / rect.width) - 0.5;
+                const y = (localY / rect.height) - 0.5;
+
+                card.style.setProperty("--tilt-y", `${x * 2.8}deg`);
+                card.style.setProperty("--tilt-x", `${y * -2.2}deg`);
+                card.style.setProperty("--local-x", `${localX}px`);
+                card.style.setProperty("--local-y", `${localY}px`);
+            }
+        }, { passive: true });
+
+        document.addEventListener("pointerout", (event) => {
+            const button = event.target.closest?.(
+                ".buton, .mini-buton, .nav-link, .filtre-sekme, .egitim-sekme"
+            );
+
+            if (button && !button.contains(event.relatedTarget)) {
+                button.style.setProperty("--mag-x", "0px");
+                button.style.setProperty("--mag-y", "0px");
+            }
+
+            const card = event.target.closest?.(
+                ".kart, .kisi-karti, .hizli-kart, .menejer-secim-karti, .izin-karti, .rol-karti"
+            );
+
+            if (card && !card.contains(event.relatedTarget)) {
+                card.style.setProperty("--tilt-x", "0deg");
+                card.style.setProperty("--tilt-y", "0deg");
+            }
+        });
+    },
+
     bindLayout() {
+        this.initMotion();
+
         const closeButton = document.getElementById("closeModal");
         const modal = document.getElementById("modal");
         const logout = document.getElementById("logoutBtn");
