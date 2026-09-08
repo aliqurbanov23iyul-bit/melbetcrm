@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b0615">
+    <title>İşlem Kayıtları | Melbet CRM</title>
+    <link rel="stylesheet" href="/assets/css/shared.css">
+</head>
+<body>
+    <div id="toast" class="toast"></div>
+
+    <div class="uygulama">
+        <aside class="kenar">
+            <div class="marka">
+                <div class="logo small">M</div>
+                <div>
+                    <b>Melbet CRM</b>
+                    <span id="whoami">Yükleniyor...</span>
+                </div>
+            </div>
+
+            <nav>
+                <a class="nav-link" href="/dashboard.html">Kontrol Paneli</a><a class="nav-link" href="/adaylar.html">Menejerler</a><a class="nav-link" href="/nda.html">NDA Takibi</a><a class="nav-link" href="/takimlar.html">Takımlar</a><a class="nav-link" href="/egitimler.html">Eğitimler</a><a class="nav-link" href="/pasif-adaylar.html">Pasif Menejerler</a><a class="nav-link super-only" href="/adminler.html">Yöneticiler</a><a class="nav-link active super-only" href="/loglar.html">İşlem Kayıtları</a>
+            </nav>
+
+            <button id="logoutBtn" class="nav-link cikis">
+                Çıkış Yap
+            </button>
+        </aside>
+
+        <main class="ana">
+            <header class="ustbar">
+                <div>
+                    <div class="ust-etiket">MENEJER OPERASYON MERKEZİ</div>
+                    <h1>İşlem Kayıtları</h1>
+                    <p>CRM üzerinde yapılan önemli işlemleri inceleyin.</p>
+                </div>
+
+                <button
+                    class="buton buton-ikincil"
+                    onclick="window.location.reload()"
+                >
+                    Yenile
+                </button>
+            </header>
+
+            <section id="content">
+                <div class="kart">Yükleniyor...</div>
+            </section>
+        </main>
+    </div>
+
+    <div id="modal" class="modal hidden">
+        <div class="modal-kart">
+            <button id="closeModal" class="modal-kapat">×</button>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script src="/assets/js/shared.js"></script>
+    <script src="/assets/js/logs.js"></script>
+</body>
+</html>

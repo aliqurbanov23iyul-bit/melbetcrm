@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b0615">
+    <title>Giriş | Melbet CRM</title>
+    <link rel="stylesheet" href="/assets/css/shared.css">
+</head>
+<body>
+    <main class="login-page">
+        <section class="login-card">
+            <div class="logo">M</div>
+            <div class="ust-etiket">DAHİLİ MENEJER OPERASYON SİSTEMİ</div>
+            <h1>Melbet CRM</h1>
+            <p>Yetkili kullanıcı girişi</p>
+
+            <div id="loginError" class="uyari hidden"></div>
+
+            <label class="alan">
+                <span>Kullanıcı Adı</span>
+                <input id="username" autocomplete="username" placeholder="Kullanıcı adınızı girin">
+            </label>
+
+            <label class="alan">
+                <span>Şifre</span>
+                <input id="password" type="password" autocomplete="current-password" placeholder="Şifrenizi girin">
+            </label>
+
+            <button id="loginBtn" class="buton buton-birincil buton-tam">
+                Giriş Yap
+            </button>
+        </section>
+    </main>
+
+    <script src="/assets/js/shared.js"></script>
+    <script src="/assets/js/login.js"></script>
+</body>
+</html>
