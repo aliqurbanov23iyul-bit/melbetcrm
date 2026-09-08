@@ -166,8 +166,30 @@ async function ensureSchema(sql) {
             trainer_admin_id BIGINT REFERENCES admins(id) ON DELETE SET NULL,
             starts_at TIMESTAMPTZ NOT NULL,
             note TEXT,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            status TEXT NOT NULL DEFAULT 'active',
+            completed_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
+    `;
+
+    /*
+     * Önceki sürümde oluşturulmuş trainings tablosunu otomatik yükselt.
+     * Böylece Neon panelinde elle SQL çalıştırmaya gerek kalmaz.
+     */
+    await sql`
+        ALTER TABLE trainings
+        ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active'
+    `;
+
+    await sql`
+        ALTER TABLE trainings
+        ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ
+    `;
+
+    await sql`
+        ALTER TABLE trainings
+        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     `;
 
     await sql`
@@ -1256,7 +1278,9 @@ export default async function handler(req, res) {
                         ON tp.training_id = tr.id
                     WHERE tr.trainer_admin_id = ${user.id}
                     GROUP BY tr.id, a.name
-                    ORDER BY tr.starts_at DESC
+                    ORDER BY
+                        CASE WHEN tr.status = 'active' THEN 0 ELSE 1 END,
+                        tr.starts_at DESC
                 `
                 : await sql`
                     SELECT
@@ -1269,7 +1293,9 @@ export default async function handler(req, res) {
                     LEFT JOIN training_participants tp
                         ON tp.training_id = tr.id
                     GROUP BY tr.id, a.name
-                    ORDER BY tr.starts_at DESC
+                    ORDER BY
+                        CASE WHEN tr.status = 'active' THEN 0 ELSE 1 END,
+                        tr.starts_at DESC
                 `;
 
             return send(res, 200, {
@@ -1297,7 +1323,9 @@ export default async function handler(req, res) {
                     title,
                     trainer_admin_id,
                     starts_at,
-                    note
+                    note,
+                    status,
+                    updated_at
                 )
                 VALUES (
                     ${String(input.title || "Eğitim").trim()},
@@ -1307,7 +1335,9 @@ export default async function handler(req, res) {
                             : null
                     },
                     ${input.starts_at},
-                    ${String(input.note || "").trim() || null}
+                    ${String(input.note || "").trim() || null},
+                    'active',
+                    NOW()
                 )
                 RETURNING *
             `;
@@ -1401,8 +1431,11 @@ export default async function handler(req, res) {
                     c.telegram,
                     c.name,
                     c.nda_status,
-                    c.status
+                    c.status,
+                    t.name AS team_name
                 FROM candidates c
+                LEFT JOIN teams t
+                    ON t.id = c.team_id
                 WHERE
                     c.archived = false
                     AND NOT EXISTS (
@@ -1424,6 +1457,175 @@ export default async function handler(req, res) {
             });
         }
 
+        if (action === "training" && method === "PATCH") {
+            if (!requireUser(user, res, "trainings.write")) {
+                return;
+            }
+
+            const input = parseBody(req);
+            const id = Number(input.id);
+
+            const current = (
+                await sql`
+                    SELECT *
+                    FROM trainings
+                    WHERE id = ${id}
+                    LIMIT 1
+                `
+            )[0];
+
+            if (!current) {
+                return send(res, 404, {
+                    ok: false,
+                    error: "Eğitim bulunamadı."
+                });
+            }
+
+            if (current.status === "completed") {
+                return send(res, 409, {
+                    ok: false,
+                    error: "Tamamlanmış eğitim düzenlenemez. Önce eğitimi tekrar aktif edin."
+                });
+            }
+
+            const title =
+                input.title !== undefined
+                    ? String(input.title).trim()
+                    : current.title;
+
+            if (!title) {
+                return send(res, 400, {
+                    ok: false,
+                    error: "Eğitim başlığı boş olamaz."
+                });
+            }
+
+            const trainerAdminId =
+                input.trainer_admin_id === "" ||
+                input.trainer_admin_id === null
+                    ? null
+                    : input.trainer_admin_id !== undefined
+                        ? Number(input.trainer_admin_id)
+                        : current.trainer_admin_id;
+
+            const startsAt =
+                input.starts_at !== undefined
+                    ? input.starts_at
+                    : current.starts_at;
+
+            if (!startsAt) {
+                return send(res, 400, {
+                    ok: false,
+                    error: "Eğitim başlangıç tarihi zorunludur."
+                });
+            }
+
+            const rows = await sql`
+                UPDATE trainings
+                SET
+                    title = ${title},
+                    trainer_admin_id = ${trainerAdminId},
+                    starts_at = ${startsAt},
+                    note = ${
+                        input.note !== undefined
+                            ? String(input.note).trim() || null
+                            : current.note
+                    },
+                    updated_at = NOW()
+                WHERE id = ${id}
+                RETURNING *
+            `;
+
+            await writeLog(
+                sql,
+                user,
+                "Eğitim bilgileri güncellendi",
+                "Eğitim",
+                id
+            );
+
+            return send(res, 200, {
+                ok: true,
+                item: rows[0]
+            });
+        }
+
+        if (action === "training-complete" && method === "POST") {
+            if (!requireUser(user, res, "trainings.write")) {
+                return;
+            }
+
+            const id = Number(parseBody(req).id);
+
+            const rows = await sql`
+                UPDATE trainings
+                SET
+                    status = 'completed',
+                    completed_at = COALESCE(completed_at, NOW()),
+                    updated_at = NOW()
+                WHERE id = ${id}
+                RETURNING *
+            `;
+
+            if (!rows.length) {
+                return send(res, 404, {
+                    ok: false,
+                    error: "Eğitim bulunamadı."
+                });
+            }
+
+            await writeLog(
+                sql,
+                user,
+                "Eğitim sonlandırıldı",
+                "Eğitim",
+                id
+            );
+
+            return send(res, 200, {
+                ok: true,
+                item: rows[0]
+            });
+        }
+
+        if (action === "training-reopen" && method === "POST") {
+            if (!requireUser(user, res, "trainings.write")) {
+                return;
+            }
+
+            const id = Number(parseBody(req).id);
+
+            const rows = await sql`
+                UPDATE trainings
+                SET
+                    status = 'active',
+                    completed_at = NULL,
+                    updated_at = NOW()
+                WHERE id = ${id}
+                RETURNING *
+            `;
+
+            if (!rows.length) {
+                return send(res, 404, {
+                    ok: false,
+                    error: "Eğitim bulunamadı."
+                });
+            }
+
+            await writeLog(
+                sql,
+                user,
+                "Eğitim tekrar aktif edildi",
+                "Eğitim",
+                id
+            );
+
+            return send(res, 200, {
+                ok: true,
+                item: rows[0]
+            });
+        }
+
         if (action === "training-participant" && method === "POST") {
             if (!requireUser(user, res, "trainings.write")) {
                 return;
@@ -1432,6 +1634,29 @@ export default async function handler(req, res) {
             const input = parseBody(req);
             const trainingId = Number(input.training_id);
             const candidateId = Number(input.candidate_id);
+
+            const training = (
+                await sql`
+                    SELECT id, status
+                    FROM trainings
+                    WHERE id = ${trainingId}
+                    LIMIT 1
+                `
+            )[0];
+
+            if (!training) {
+                return send(res, 404, {
+                    ok: false,
+                    error: "Eğitim bulunamadı."
+                });
+            }
+
+            if (training.status === "completed") {
+                return send(res, 409, {
+                    ok: false,
+                    error: "Tamamlanmış eğitime menejer eklenemez."
+                });
+            }
 
             const rows = await sql`
                 INSERT INTO training_participants (
@@ -1476,7 +1701,8 @@ export default async function handler(req, res) {
                 await sql`
                     SELECT
                         tp.*,
-                        tr.trainer_admin_id
+                        tr.trainer_admin_id,
+                        tr.status AS training_status
                     FROM training_participants tp
                     JOIN trainings tr
                         ON tr.id = tp.training_id
@@ -1501,6 +1727,13 @@ export default async function handler(req, res) {
                 });
             }
 
+            if (current.training_status === "completed") {
+                return send(res, 409, {
+                    ok: false,
+                    error: "Tamamlanmış eğitim sonuçları değiştirilemez. Önce eğitimi tekrar aktif edin."
+                });
+            }
+
             const rows = await sql`
                 UPDATE training_participants
                 SET
@@ -1519,6 +1752,14 @@ export default async function handler(req, res) {
                 RETURNING *
             `;
 
+            await writeLog(
+                sql,
+                user,
+                "Eğitim katılımcı sonucu güncellendi",
+                "Eğitim",
+                current.training_id
+            );
+
             return send(res, 200, {
                 ok: true,
                 item: rows[0]
@@ -1533,25 +1774,45 @@ export default async function handler(req, res) {
             const input = parseBody(req);
             const id = Number(input.id);
 
-            const removed = await sql`
-                DELETE FROM training_participants
-                WHERE id = ${id}
-                RETURNING training_id
-            `;
+            const current = (
+                await sql`
+                    SELECT
+                        tp.id,
+                        tp.training_id,
+                        tr.status AS training_status
+                    FROM training_participants tp
+                    JOIN trainings tr
+                        ON tr.id = tp.training_id
+                    WHERE tp.id = ${id}
+                    LIMIT 1
+                `
+            )[0];
 
-            if (!removed.length) {
+            if (!current) {
                 return send(res, 404, {
                     ok: false,
                     error: "Katılımcı bulunamadı."
                 });
             }
 
+            if (current.training_status === "completed") {
+                return send(res, 409, {
+                    ok: false,
+                    error: "Tamamlanmış eğitimden menejer çıkarılamaz."
+                });
+            }
+
+            await sql`
+                DELETE FROM training_participants
+                WHERE id = ${id}
+            `;
+
             await writeLog(
                 sql,
                 user,
                 "Menejer eğitimden çıkarıldı",
                 "Eğitim",
-                removed[0].training_id
+                current.training_id
             );
 
             return send(res, 200, {
@@ -1583,7 +1844,7 @@ export default async function handler(req, res) {
             await writeLog(
                 sql,
                 user,
-                "Eğitim silindi",
+                "Eğitim kalıcı olarak silindi",
                 "Eğitim",
                 id
             );
