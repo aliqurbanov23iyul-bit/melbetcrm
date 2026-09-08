@@ -7,138 +7,272 @@
     }
 
     async function load() {
-        const data = await CRM.api("trainings");
+        try {
+            const data = await CRM.api("trainings");
 
-        document.getElementById("content").innerHTML = `
-            <div class="araclar">
-                ${
-                    user.role === "trainer"
-                        ? ""
-                        : `
-                            <button
-                                id="egitimEkle"
-                                class="buton buton-birincil"
-                            >
-                                + Eğitim Oluştur
-                            </button>
-                        `
-                }
-            </div>
+            const activeItems = data.items.filter(
+                (training) => (training.status || "active") !== "completed"
+            );
 
-            <div class="egitim-karti-grid">
-                ${
-                    data.items.length
-                        ? data.items
-                              .map(
-                                  (training) => `
-                                    <article class="kisi-karti">
-                                        <div class="kisi-ust">
-                                            <div class="avatar">
-                                                E
-                                            </div>
+            const completedItems = data.items.filter(
+                (training) => training.status === "completed"
+            );
 
-                                            <div>
-                                                <b>
-                                                    ${CRM.escape(
-                                                        training.title
-                                                    )}
-                                                </b>
+            document.getElementById("content").innerHTML = `
+                <div class="araclar">
+                    ${
+                        user.role === "trainer"
+                            ? ""
+                            : `
+                                <button
+                                    id="egitimEkle"
+                                    class="buton buton-birincil"
+                                >
+                                    + Eğitim Oluştur
+                                </button>
+                            `
+                    }
+                </div>
 
-                                                <span>
-                                                    ${CRM.formatDate(
-                                                        training.starts_at
-                                                    )}
-                                                </span>
-                                            </div>
-                                        </div>
+                <div class="baslik-satiri">
+                    <div>
+                        <h2>Aktif Eğitimler</h2>
+                        <div class="soluk">
+                            Devam eden ve düzenlenebilen eğitimler.
+                        </div>
+                    </div>
+                </div>
 
-                                        <div class="kisi-alt">
-                                            <span class="rozet">
-                                                Eğitmen:
-                                                ${CRM.escape(
-                                                    training.trainer_name ||
-                                                        "Atanmadı"
-                                                )}
-                                            </span>
+                <div class="egitim-karti-grid">
+                    ${renderTrainingCards(activeItems, false)}
+                </div>
 
-                                            <span class="rozet">
-                                                ${
-                                                    training.participant_count
-                                                } Menejer
-                                            </span>
-                                        </div>
+                <div class="baslik-satiri" style="margin-top: 28px;">
+                    <div>
+                        <h2>Tamamlanan Eğitimler</h2>
+                        <div class="soluk">
+                            Sonlandırılan eğitimler kayıtlı kalır ve istenirse daha sonra silinebilir.
+                        </div>
+                    </div>
+                </div>
 
-                                        <div class="kart-aksiyon">
-                                            <a
-                                                class="mini-buton"
-                                                href="/egitim-detay.html?id=${
-                                                    training.id
-                                                }"
-                                            >
-                                                Eğitimi Aç
-                                            </a>
+                <div class="egitim-karti-grid">
+                    ${renderTrainingCards(completedItems, true)}
+                </div>
+            `;
 
-                                            ${
-                                                user.role === "trainer"
-                                                    ? ""
-                                                    : `
-                                                        <button
-                                                            class="mini-buton tehlike"
-                                                            data-training-delete="${training.id}"
-                                                        >
-                                                            Eğitimi Sil
-                                                        </button>
-                                                    `
-                                            }
-                                        </div>
-                                    </article>
-                                `
-                              )
-                              .join("")
-                        : `
-                            <div class="kart bos">
-                                Henüz eğitim oluşturulmadı.
-                            </div>
-                        `
-                }
-            </div>
-        `;
+            const addButton = document.getElementById("egitimEkle");
 
-        const addButton = document.getElementById("egitimEkle");
+            if (addButton) {
+                addButton.onclick = openCreate;
+            }
 
-        if (addButton) {
-            addButton.onclick = openCreate;
+            document
+                .querySelectorAll("[data-training-complete]")
+                .forEach((button) => {
+                    button.onclick = async () => {
+                        const approved = window.confirm(
+                            "Bu eğitimi sonlandırmak istediğinizden emin misiniz? Kayıtlar silinmeyecek."
+                        );
+
+                        if (!approved) {
+                            return;
+                        }
+
+                        try {
+                            await CRM.api("training-complete", {
+                                method: "POST",
+                                body: {
+                                    id: Number(button.dataset.trainingComplete)
+                                }
+                            });
+
+                            CRM.toast("Eğitim sonlandırıldı.");
+                            load();
+                        } catch (err) {
+                            CRM.toast(err.message);
+                        }
+                    };
+                });
+
+            document
+                .querySelectorAll("[data-training-reopen]")
+                .forEach((button) => {
+                    button.onclick = async () => {
+                        const approved = window.confirm(
+                            "Bu eğitimi tekrar aktif etmek istediğinizden emin misiniz?"
+                        );
+
+                        if (!approved) {
+                            return;
+                        }
+
+                        try {
+                            await CRM.api("training-reopen", {
+                                method: "POST",
+                                body: {
+                                    id: Number(button.dataset.trainingReopen)
+                                }
+                            });
+
+                            CRM.toast("Eğitim tekrar aktif edildi.");
+                            load();
+                        } catch (err) {
+                            CRM.toast(err.message);
+                        }
+                    };
+                });
+
+            document
+                .querySelectorAll("[data-training-delete]")
+                .forEach((button) => {
+                    button.onclick = async () => {
+                        const approved = window.confirm(
+                            "Bu tamamlanmış eğitimi ve tüm katılımcı kayıtlarını KALICI olarak silmek istediğinizden emin misiniz?"
+                        );
+
+                        if (!approved) {
+                            return;
+                        }
+
+                        try {
+                            await CRM.api("training", {
+                                method: "DELETE",
+                                body: {
+                                    id: Number(
+                                        button.dataset.trainingDelete
+                                    )
+                                }
+                            });
+
+                            CRM.toast("Eğitim kalıcı olarak silindi.");
+                            load();
+                        } catch (err) {
+                            CRM.toast(err.message);
+                        }
+                    };
+                });
+        } catch (err) {
+            document.getElementById("content").innerHTML = `
+                <div class="uyari">${CRM.escape(err.message)}</div>
+            `;
+        }
+    }
+
+    function renderTrainingCards(items, completed) {
+        if (!items.length) {
+            return `
+                <div class="kart bos">
+                    ${
+                        completed
+                            ? "Henüz tamamlanmış eğitim bulunmuyor."
+                            : "Henüz aktif eğitim bulunmuyor."
+                    }
+                </div>
+            `;
         }
 
-        document
-            .querySelectorAll("[data-training-delete]")
-            .forEach((button) => {
-                button.onclick = async () => {
-                    const approved = window.confirm(
-                        "Bu eğitimi ve katılımcı kayıtlarını silmek istediğinizden emin misiniz?"
-                    );
+        return items
+            .map(
+                (training) => `
+                    <article class="kisi-karti">
+                        <div class="kisi-ust">
+                            <div class="avatar">
+                                ${completed ? "✓" : "E"}
+                            </div>
 
-                    if (!approved) {
-                        return;
-                    }
+                            <div>
+                                <b>
+                                    ${CRM.escape(training.title)}
+                                </b>
 
-                    try {
-                        await CRM.api("training", {
-                            method: "DELETE",
-                            body: {
-                                id: Number(
-                                    button.dataset.trainingDelete
-                                )
+                                <span>
+                                    ${CRM.formatDate(training.starts_at)}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="kisi-alt">
+                            <span class="rozet">
+                                Eğitmen:
+                                ${CRM.escape(
+                                    training.trainer_name || "Atanmadı"
+                                )}
+                            </span>
+
+                            <span class="rozet">
+                                ${training.participant_count} Menejer
+                            </span>
+
+                            <span class="rozet ${
+                                completed ? "yesil" : ""
+                            }">
+                                ${
+                                    completed
+                                        ? "Tamamlandı"
+                                        : "Aktif"
+                                }
+                            </span>
+
+                            ${
+                                completed && training.completed_at
+                                    ? `
+                                        <span class="rozet">
+                                            Sonlandırıldı:
+                                            ${CRM.formatDate(
+                                                training.completed_at
+                                            )}
+                                        </span>
+                                    `
+                                    : ""
                             }
-                        });
+                        </div>
 
-                        CRM.toast("Eğitim silindi.");
-                        load();
-                    } catch (err) {
-                        CRM.toast(err.message);
-                    }
-                };
-            });
+                        <div class="kart-aksiyon">
+                            <a
+                                class="mini-buton"
+                                href="/egitim-detay.html?id=${training.id}"
+                            >
+                                ${
+                                    completed
+                                        ? "Kaydı Görüntüle"
+                                        : "Eğitimi Aç"
+                                }
+                            </a>
+
+                            ${
+                                user.role === "trainer"
+                                    ? ""
+                                    : completed
+                                        ? `
+                                            <button
+                                                class="mini-buton"
+                                                data-training-reopen="${training.id}"
+                                            >
+                                                Tekrar Aktif Et
+                                            </button>
+
+                                            <button
+                                                class="mini-buton tehlike"
+                                                data-training-delete="${training.id}"
+                                            >
+                                                Kalıcı Sil
+                                            </button>
+                                        `
+                                        : `
+                                            <button
+                                                class="mini-buton"
+                                                data-training-complete="${training.id}"
+                                            >
+                                                Eğitimi Sonlandır
+                                            </button>
+                                        `
+                            }
+                        </div>
+                    </article>
+                `
+            )
+            .join("");
     }
 
     async function openCreate() {
